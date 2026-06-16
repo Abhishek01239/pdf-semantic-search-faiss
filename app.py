@@ -1,81 +1,73 @@
-import os
-
 from pdf_loader import extract_pdf_text
 from chunker import create_chunks
-from embedder import generate_embeddings
 
-from faiss_store import (
-    create_faiss_index,
-    load_faiss_index
+from chroma_store import (
+    get_collection,
+    store_chunks
 )
 
-from faiss_search import search_faiss
+from chroma_search import search_chunks
 
-def build_index():
 
-    print("Building FAISS index...")
+def build_database():
 
-    pdf_path = "chunking/data/sample.pdf"
-
-    text = extract_pdf_text(pdf_path)
+    text = extract_pdf_text(
+        "pdf-semantic-search-faiss/data/sample.pdf"
+    )
 
     chunks = create_chunks(text)
 
-    embeddings = generate_embeddings(chunks)
-
-    create_faiss_index(
-        chunks,
-        embeddings
-    )
-
-    print("Index created successfully!\n")
+    store_chunks(chunks)
 
 
 def main():
 
-    if not os.path.exists("faiss_index.bin"):
-        build_index()
+    collection = get_collection()
 
-    index, chunks = load_faiss_index()
+    if collection.count() == 0:
+        build_database()
 
     print("=" * 60)
-    print("PDF Semantic Search using FAISS")
-    print("Type 'exit' to quit")
+    print("PDF Semantic Search using ChromaDB")
     print("=" * 60)
 
     while True:
 
-        query = input("\nAsk a question: ").strip()
+        query = input(
+            "\nAsk a question (exit to quit): "
+        ).strip()
 
         if query.lower() == "exit":
-            print("Goodbye!")
             break
 
-        if not query:
-            print("Please enter a valid question.")
-            continue
-
-        query_embedding = generate_embeddings([query])[0]
-
-        results = search_faiss(
-            query_embedding=query_embedding,
-            index=index,
-            chunks=chunks,
+        results = search_chunks(
+            query,
+            collection,
             top_k=3
         )
 
-        print("\nTop Matching Chunks:\n")
+        print("\nResults:\n")
 
         for result in results:
 
             print("=" * 80)
-            print(f"Rank     : {result['rank']}")
-            print(f"Distance : {result['distance']:.4f}")
+
+            print(
+                f"Rank: {result['rank']}"
+            )
+
+            print(
+                f"Distance: "
+                f"{result['distance']:.4f}"
+            )
+
             print("-" * 80)
+
             print(result["chunk"])
+
             print()
 
-        print("=" * 80)
+    print("Goodbye!")
 
 
 if __name__ == "__main__":

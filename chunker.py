@@ -16,7 +16,6 @@ def create_chunks(text):
 
         return splitter.split_text(text)
 
-    # Fallback simple splitter
     chunk_size = 500
     chunk_overlap = 100
     if not text:
