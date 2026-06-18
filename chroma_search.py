@@ -9,16 +9,21 @@ def search_chunks(query, collection, top_k=3):
     )
 
     formatted_results = []
+    
+    for i in range(
+        len(results["documents"][0])
+    ):
+        formatted_results.append(
+            {
+                "rank": 1,
 
-    docs = results.get("documents", [[]])[0]
-    dists = results.get("distances", [[]])[0]
+                "chunk": results["documents"][0][i],
 
-    for i in range(len(docs)):
-        formatted_results.append({
-            "rank": i + 1,
-            "chunk": docs[i],
-            "distance": dists[i]
-        })
+                "distance": results["distances"][0][i],
+
+                "metadata": results["metadatas"][0][i]
+            }
+        )
 
     return formatted_results
 

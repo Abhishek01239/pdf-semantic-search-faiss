@@ -1,23 +1,24 @@
-from pdf_loader import extract_pdf_text
-from chunker import create_chunks
+from pdf_loader import load_all_pdfs
 
 from chroma_store import (
     get_collection,
-    store_chunks
+    store_documents
 )
 
 from chroma_search import search_chunks
 
+from llm import generate_answer
+
 
 def build_database():
 
-    text = extract_pdf_text(
-        "pdf-semantic-search-faiss/data/sample.pdf"
+    documents = load_all_pdfs(
+        "data"
     )
 
-    chunks = create_chunks(text)
-
-    store_chunks(chunks)
+    store_documents(
+        documents
+    )
 
 
 def main():
@@ -25,49 +26,114 @@ def main():
     collection = get_collection()
 
     if collection.count() == 0:
+
+        print(
+            "Building ChromaDB..."
+        )
+
         build_database()
 
-    print("=" * 60)
-    print("PDF Semantic Search using ChromaDB")
-    print("=" * 60)
+    print("=" * 70)
+    print(
+        "Multi-Document RAG Assistant"
+    )
+    print(
+        "Type 'exit' to quit"
+    )
+    print("=" * 70)
 
     while True:
 
         query = input(
-            "\nAsk a question (exit to quit): "
+            "\nAsk a question: "
         ).strip()
 
         if query.lower() == "exit":
+
+            print(
+                "Goodbye!"
+            )
+
             break
 
+        if not query:
+
+            print(
+                "Please enter a question."
+            )
+
+            continue
+
         results = search_chunks(
-            query,
-            collection,
+            query=query,
+            collection=collection,
             top_k=3
         )
 
-        print("\nResults:\n")
+        context = "\n\n".join(
+            [
+                result["chunk"]
+                for result in results
+            ]
+        )
+
+        answer = generate_answer(
+            context,
+            query
+        )
+
+        print("\n")
+        print("=" * 70)
+        print("ANSWER")
+        print("=" * 70)
+        print(answer)
+
+        print("\n")
+        print("=" * 70)
+        print("SOURCES")
+        print("=" * 70)
 
         for result in results:
 
-            print("=" * 80)
+            source = (
+                result["metadata"]
+                ["source"]
+            )
 
-            print(
-                f"Rank: {result['rank']}"
+            chunk_id = (
+                result["metadata"]
+                ["chunk_id"]
+            )
+
+            distance = (
+                result["distance"]
             )
 
             print(
-                f"Distance: "
-                f"{result['distance']:.4f}"
+                f"\nFile      : {source}"
             )
 
-            print("-" * 80)
+            print(
+                f"Chunk ID  : {chunk_id}"
+            )
 
-            print(result["chunk"])
+            print(
+                f"Distance  : {distance:.4f}"
+            )
+
+            print(
+                "-" * 70
+            )
+
+            print(
+                result["chunk"][:300]
+            )
 
             print()
 
-    print("Goodbye!")
+    print(
+        "\nSession Ended."
+    )
 
 
 if __name__ == "__main__":

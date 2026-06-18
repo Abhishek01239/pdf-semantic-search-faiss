@@ -1,14 +1,31 @@
+import os
 from PyPDF2 import PdfReader
 
-def extract_pdf_text(pdf_path):
-    reader = PdfReader(pdf_path)
+def load_all_pdfs(data_folder):
+    documents = []
 
-    text = ""
+    for filename in os.listdir(data_folder):
+        if filename.endswith(".pdf"):
+            pdf_path = os.path.join(
+                data_folder,
+                filename
+            )
 
-    for page in reader.pages:
-        page_text = page.extract_text()
+            reader = PdfReader(pdf_path)
 
-        if page_text:
-            text += page_text + "\n"
+            text = ""
 
-    return text
+            for page in reader.pages:
+                page_text = page.extract_text()
+
+                if page_text:
+                    text += page_text
+
+            documents.append(
+                {
+                    "source": filename,
+                    "text": text
+                }
+            )  
+
+    return documents

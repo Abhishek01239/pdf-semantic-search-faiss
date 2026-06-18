@@ -1,96 +1,78 @@
-from pdf_loader import extract_pdf_text
+import chromadb
+
 from chunker import create_chunks
-
-from chroma_store import (
-    get_collection,
-    store_chunks
-)
-
-from chroma_search import search_chunks
-
-from llm import generate_answer
+from embedder import generate_embeddings
 
 
-def build_database():
+CHROMA_PATH = "chroma_db"
+COLLECTION_NAME = "pdf_chunks"
 
-    text = extract_pdf_text(
-        "data/sample.pdf"
+
+def get_collection():
+
+    client = chromadb.PersistentClient(
+        path=CHROMA_PATH
     )
 
-    chunks = create_chunks(text)
+    collection = client.get_or_create_collection(
+        name=COLLECTION_NAME
+    )
 
-    store_chunks(chunks)
+    return collection
 
 
-def main():
+def store_documents(documents):
 
     collection = get_collection()
 
-    if collection.count() == 0:
-        build_database()
+    if collection.count() > 0:
+        print("Database already contains data.")
+        return
 
-    print("=" * 60)
-    print("PDF RAG Assistant (ChromaDB + Ollama)")
-    print("Type 'exit' to quit")
-    print("=" * 60)
+    ids = []
+    chunks = []
+    metadata = []
 
-    while True:
+    current_id = 0
 
-        query = input(
-            "\nAsk a question: "
-        ).strip()
+    for document in documents:
 
-        if query.lower() == "exit":
-            print("Goodbye!")
-            break
+        source = document["source"]
 
-        if not query:
-            print("Please enter a valid question.")
-            continue
-
-        # Retrieve relevant chunks
-        results = search_chunks(
-            query,
-            collection,
-            top_k=3
+        document_chunks = create_chunks(
+            document["text"]
         )
 
-        # Build context from retrieved chunks
-        context = "\n\n".join(
-            [
-                result["chunk"]
-                for result in results
-            ]
-        )
+        for chunk_index, chunk in enumerate(
+            document_chunks
+        ):
 
-        # Generate answer using Ollama
-        answer = generate_answer(
-            context,
-            query
-        )
-
-        print("\n" + "=" * 80)
-        print("ANSWER")
-        print("=" * 80)
-        print(answer)
-
-        print("\n" + "=" * 80)
-        print("SOURCE CHUNKS")
-        print("=" * 80)
-
-        for result in results:
-
-            print(
-                f"\nDistance: "
-                f"{result['distance']:.4f}"
+            ids.append(
+                str(current_id)
             )
 
-            print("-" * 80)
+            chunks.append(chunk)
 
-            print(result["chunk"])
+            metadata.append(
+                {
+                    "source": source,
+                    "chunk_id": chunk_index
+                }
+            )
 
-    print("\nSession Ended.")
+            current_id += 1
 
+    embeddings = generate_embeddings(
+        chunks
+    )
 
-if __name__ == "__main__":
-    main()
+    collection.add(
+        ids=ids,
+        documents=chunks,
+        embeddings=embeddings.tolist(),
+        metadatas=metadata
+    )
+
+    print(
+        f"Stored {len(chunks)} chunks successfully."
+    )
