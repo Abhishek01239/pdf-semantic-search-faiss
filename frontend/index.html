@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG PDF Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Document workspace">
+            <div class="brand-block">
+                <div class="brand-mark" aria-hidden="true">R</div>
+                <div>
+                    <p class="eyebrow">Local PDF RAG</p>
+                    <h1>PDF Assistant</h1>
+                </div>
+            </div>
+
+            <div class="status-card" id="apiStatus" data-state="checking">
+                <span class="status-dot" aria-hidden="true"></span>
+                <div>
+                    <strong id="apiStatusText">Checking backend</strong>
+                    <p id="apiStatusDetail">Looking for FastAPI on port 8000.</p>
+                </div>
+            </div>
+
+            <section class="panel upload-panel" aria-labelledby="uploadTitle">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">Knowledge base</p>
+                        <h2 id="uploadTitle">Upload PDFs</h2>
+                    </div>
+                    <span class="count-pill" id="fileCount">0 files</span>
+                </div>
+
+                <form id="uploadForm" class="upload-form">
+                    <input id="fileInput" type="file" accept=".pdf,application/pdf" multiple>
+                    <label for="fileInput" class="drop-zone" id="dropZone">
+                        <span class="drop-icon" aria-hidden="true">PDF</span>
+                        <span class="drop-title">Drop PDFs here</span>
+                        <span class="drop-copy">or browse from your computer</span>
+                    </label>
+
+                    <div class="selected-files" id="selectedFiles" aria-live="polite">
+                        <p class="muted">No files selected.</p>
+                    </div>
+
+                    <div class="progress-wrap" id="uploadProgress" aria-hidden="true">
+                        <div class="progress-meta">
+                            <span id="progressLabel">Ready</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="progressBar"></div>
+                        </div>
+                    </div>
+
+                    <div id="uploadStatus" class="notice" role="status" aria-live="polite"></div>
+
+                    <div class="upload-actions">
+                        <button type="button" class="btn btn-secondary" id="clearFilesBtn">Clear</button>
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">Upload</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="panel compact-panel" aria-labelledby="recentUploadsTitle">
+                <div class="panel-heading tight">
+                    <h2 id="recentUploadsTitle">Recent uploads</h2>
+                    <button type="button" class="icon-btn" id="clearUploadsBtn" title="Clear upload list" aria-label="Clear upload list">x</button>
+                </div>
+                <div id="recentUploads" class="recent-list">
+                    <p class="muted">Uploaded files will appear here.</p>
+                </div>
+            </section>
+        </aside>
+
+        <main class="workspace">
+            <section class="chat-card" aria-labelledby="chatTitle">
+                <header class="chat-header">
+                    <div>
+                        <p class="eyebrow">Ask your documents</p>
+                        <h2 id="chatTitle">Chat</h2>
+                    </div>
+                    <div class="chat-actions">
+                        <button type="button" class="btn btn-secondary small" id="copyLastBtn">Copy answer</button>
+                        <button type="button" class="btn btn-secondary small" id="clearChatBtn">Clear chat</button>
+                    </div>
+                </header>
+
+                <div class="suggestions" id="suggestions" aria-label="Suggested questions">
+                    <button type="button">Summarize the uploaded PDFs.</button>
+                    <button type="button">What are the key skills mentioned?</button>
+                    <button type="button">List important dates or achievements.</button>
+                </div>
+
+                <div id="chatMessages" class="chat-messages" aria-live="polite">
+                    <article class="message assistant welcome">
+                        <div class="avatar" aria-hidden="true">AI</div>
+                        <div class="message-body">
+                            <p>Upload one or more PDFs, then ask a question. Answers will cite the chunks used from your documents.</p>
+                        </div>
+                    </article>
+                </div>
+
+                <form id="questionForm" class="composer">
+                    <textarea id="questionInput" rows="1" placeholder="Ask a question about your PDFs..." autocomplete="off" required></textarea>
+                    <button type="button" class="btn btn-secondary" id="cancelBtn" hidden>Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
+                </form>
+            </section>
+
+            <aside class="sources-panel" aria-labelledby="sourcesTitle">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">Retrieved context</p>
+                        <h2 id="sourcesTitle">Sources</h2>
+                    </div>
+                    <span class="count-pill" id="sourceCount">0</span>
+                </div>
+                <div id="sourcesList" class="sources-list">
+                    <p class="muted center">Sources from the latest answer will appear here.</p>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

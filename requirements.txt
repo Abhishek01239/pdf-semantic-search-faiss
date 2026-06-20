@@ -1,4 +1,10 @@
-PyPDF2
+﻿PyPDF2
 sentence_transformers
 faiss-cpu
 numpy
+fastapi
+uvicorn
+python-multipart
+ollama
+python-dotenv
+chromadb
