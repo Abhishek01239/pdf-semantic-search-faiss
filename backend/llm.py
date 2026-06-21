@@ -1,12 +1,17 @@
 from ollama import chat
 
 
-def generate_answer(context, question):
+def generate_answer(history,context, question):
 
+    previous = ""
+
+    for message in history:
+        previous += (
+            f"{message['role']}:"
+            f"{message['content']}\n"
+        )
     prompt = f"""
-You are a helpful AI assistant.
-
-Use ONLY the provided context to answer.
+Conversation History: {previous}
 
 Context:
 {context}

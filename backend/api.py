@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 import tempfile
 from PyPDF2 import PdfReader
+from memory import add_message, get_history, clear_history
 
 from chroma_store import (
     get_collection,
@@ -74,18 +75,29 @@ def frontend_script():
     )
 
 @app.post("/ask")
-def ask_question(
-    request: QueryRequest
-):
+def ask_question(request: QueryRequest):
 
+    question = request.question.strip()
+
+    if not question:
+        return {
+            "error": "Question cannot be empty."
+        }
+
+    # Get previous conversation
+    history = get_history()
+
+    # Get Chroma collection
     collection = get_collection()
 
+    # Retrieve relevant chunks
     results = search_chunks(
-        query=request.question,
+        query=question,
         collection=collection,
         top_k=3
     )
 
+    # Build context
     context = "\n\n".join(
         [
             result["chunk"]
@@ -93,18 +105,30 @@ def ask_question(
         ]
     )
 
+    # Generate answer using memory + context
     answer = generate_answer(
+        history,
         context,
-        request.question
+        question
     )
 
+    # Save conversation
+    add_message(
+        "user",
+        question
+    )
+
+    add_message(
+        "assistant",
+        answer
+    )
+
+    # Build sources
     sources = []
 
     for result in results:
 
-        metadata = result[
-            "metadata"
-        ]
+        metadata = result["metadata"]
 
         sources.append(
             {
@@ -112,15 +136,21 @@ def ask_question(
                     metadata["source"],
 
                 "chunk_id":
-                    metadata["chunk_id"]
+                    metadata["chunk_id"],
+
+                "distance":
+                    result["distance"]
             }
         )
 
     return {
+        "question": question,
         "answer": answer,
-        "sources": sources
+        "sources": sources,
+        "history_length": len(
+            get_history()
+        )
     }
-
 
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -196,3 +226,10 @@ async def upload_pdf(file: UploadFile = File(...)):
             "message": f"Error processing file: {str(e)}"
         }
 
+@app.post('/clear')
+def clear_chat():
+    clear_history()
+
+    return{
+        "message":"Conversation Cleared"
+    }

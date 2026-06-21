@@ -8,6 +8,7 @@ from chroma_store import (
 from chroma_search import search_chunks
 
 from llm import generate_answer
+from memory import get_history, add_message
 
 
 def build_database():
@@ -77,9 +78,22 @@ def main():
             ]
         )
 
+        history = get_history()
+
         answer = generate_answer(
+            history,
             context,
             query
+        )
+
+        add_message(
+            "user",
+            query
+        )
+
+        add_message(
+            "assistant",
+            answer
         )
 
         print("\n")
