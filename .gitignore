@@ -1,62 +1,27 @@
-# ==========================
-# Python Cache
-# ==========================
+# Python
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
 
-# ==========================
-# Build Files
-# ==========================
-build/
-dist/
-*.egg-info/
+# Virtual Environment
+venv/
+.venv/
 
-# ==========================
-# IDE Files
-# ==========================
-.vscode/
-.idea/
+# ChromaDB
+backend/chroma_db/
 
-# ==========================
-# Environment Variables
-# ==========================
+# PDF data
+backend/data/
+
+# Environment files
 .env
 
-# ==========================
-# Logs
-# ==========================
-*.log
+# React
+frontend/node_modules/
+frontend/dist/
 
-# ==========================
-# OS Files
-# ==========================
+# VS Code
+.vscode/
+
+# Mac/Windows
 .DS_Store
 Thumbs.db
-
-# ==========================
-# ChromaDB Storage
-# ==========================
-chroma_db/
-
-# ==========================
-# Old FAISS Files (if any)
-# ==========================
-faiss_index.bin
-chunks.pkl
-
-# ==========================
-# Jupyter Notebooks
-# ==========================
-.ipynb_checkpoints/
-
-# ==========================
-# Pytest
-# ==========================
-.pytest_cache/
-
-# ==========================
-# Coverage Reports
-# ==========================
-.coverage
-htmlcov/
