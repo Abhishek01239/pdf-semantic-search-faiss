@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
@@ -29,6 +29,11 @@ app = FastAPI()
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
+# Mount static assets from React production build
+dist_assets = FRONTEND_DIR / "dist" / "assets"
+os.makedirs(dist_assets, exist_ok=True)
+app.mount("/assets", StaticFiles(directory=dist_assets), name="assets")
+
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
@@ -53,26 +58,11 @@ def home():
 
 @app.get("/app", response_class=HTMLResponse)
 def frontend_app():
+    dist_index = FRONTEND_DIR / "dist" / "index.html"
+    if dist_index.exists():
+        return FileResponse(dist_index)
+    return HTMLResponse("<h2>React Frontend is not built yet. Run 'npm run build' inside frontend directory.</h2>")
 
-    return FileResponse(
-        FRONTEND_DIR / "index.html"
-    )
-
-
-@app.get("/styles.css")
-def frontend_styles():
-
-    return FileResponse(
-        FRONTEND_DIR / "styles.css"
-    )
-
-
-@app.get("/script.js")
-def frontend_script():
-
-    return FileResponse(
-        FRONTEND_DIR / "script.js"
-    )
 
 @app.post("/ask")
 def ask_question(request: QueryRequest):
@@ -105,12 +95,20 @@ def ask_question(request: QueryRequest):
         ]
     )
 
-    # Generate answer using memory + context
-    answer = generate_answer(
-        history,
-        context,
-        question
-    )
+    # Generate answer using memory + context (wrapped with error safety for Ollama)
+    try:
+        answer = generate_answer(
+            history,
+            context,
+            question
+        )
+    except Exception as e:
+        answer = (
+            f"Ollama generation error: {str(e)}\n\n"
+            "Please ensure that the local Ollama server is running and that "
+            "you have pulled the required model by running:\n"
+            "  ollama pull mistral"
+        )
 
     # Save conversation
     add_message(
