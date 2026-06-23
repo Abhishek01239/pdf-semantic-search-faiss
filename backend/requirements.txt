@@ -1,9 +1,9 @@
 PyPDF2
-sentence-transformers
-numpy
 fastapi
 uvicorn
 python-multipart
 python-dotenv
-chromadb
 groq
+qdrant-client
+requests
+numpy

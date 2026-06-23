@@ -9,14 +9,7 @@ import tempfile
 from PyPDF2 import PdfReader
 from memory import add_message, get_history, clear_history
 
-from chroma_store import (
-    get_collection,
-    store_documents
-)
-
-from chroma_search import (
-    search_chunks
-)
+from qdrant_store import search_chunks, store_chunks
 
 from llm import (
     generate_answer
@@ -77,15 +70,9 @@ def ask_question(request: QueryRequest):
     # Get previous conversation
     history = get_history()
 
-    # Get Chroma collection
-    collection = get_collection()
-
-    # Retrieve relevant chunks
     results = search_chunks(
-        query=question,
-        collection=collection,
-        top_k=3
-    )
+    question
+)
 
     # Build context
     context = "\n\n".join(
@@ -95,7 +82,7 @@ def ask_question(request: QueryRequest):
         ]
     )
 
-    # Generate answer using memory + context (wrapped with error safety for Ollama)
+    # Generate answer using memory + context (wrapped with error safety for Groq)
     try:
         answer = generate_answer(
             history,
@@ -104,10 +91,9 @@ def ask_question(request: QueryRequest):
         )
     except Exception as e:
         answer = (
-            f"Ollama generation error: {str(e)}\n\n"
-            "Please ensure that the local Ollama server is running and that "
-            "you have pulled the required model by running:\n"
-            "  ollama pull mistral"
+            f"Groq API generation error: {str(e)}\n\n"
+            "Please ensure that the GROQ_API_KEY environment variable is correctly set in backend/.env "
+            "and that you have internet connectivity to access the Groq API."
         )
 
     # Save conversation
@@ -187,14 +173,8 @@ async def upload_pdf(file: UploadFile = File(...)):
             }
         
         # Create chunks and embeddings
-        collection = get_collection()
-        
         chunks = create_chunks(text)
         embeddings = generate_embeddings(chunks)
-        
-        # Generate IDs starting from current max ID
-        current_id = collection.count()
-        ids = [str(current_id + i) for i in range(len(chunks))]
         
         metadata = [
             {
@@ -205,12 +185,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         ]
         
         # Store in collection
-        collection.add(
-            ids=ids,
-            documents=chunks,
-            embeddings=embeddings.tolist(),
-            metadatas=metadata
-        )
+        store_chunks(chunks, embeddings, metadata)
         
         return {
             "success": True,

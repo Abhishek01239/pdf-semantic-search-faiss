@@ -1,6 +1,7 @@
 import os
 
 from groq import Groq
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,8 +29,6 @@ def generate_answer(
         )
 
     prompt = f"""
-You are a helpful AI assistant.
-
 Conversation History:
 {previous}
 
@@ -43,13 +42,19 @@ Answer:
 """
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=
+        "llama-3.3-70b-versatile",
+
         messages=[
             {
-                "role": "user",
-                "content": prompt
+                "role":
+                "user",
+
+                "content":
+                prompt
             }
         ],
+
         temperature=0.3
     )
 

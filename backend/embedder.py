@@ -1,26 +1,45 @@
-from sentence_transformers import SentenceTransformer
+import os
+import requests
 
-model = None
+from dotenv import load_dotenv
 
+load_dotenv()
 
-def get_model():
-    global model
-
-    if model is None:
-        model = SentenceTransformer(
-            "all-MiniLM-L6-v2",
-            device="cpu"
-        )
-
-    return model
+JINA_API_KEY = os.getenv(
+    "JINA_API_KEY"
+)
 
 
 def generate_embeddings(texts):
-    model = get_model()
 
-    embeddings = model.encode(
-        texts,
-        convert_to_numpy=True
+    response = requests.post(
+        "https://api.jina.ai/v1/embeddings",
+
+        headers={
+            "Authorization":
+            f"Bearer {JINA_API_KEY}",
+            "Content-Type":
+            "application/json"
+        },
+
+        json={
+            "model":
+            "jina-embeddings-v3",
+
+            "input":
+            texts
+        }
     )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    embeddings = []
+
+    for item in data["data"]:
+        embeddings.append(
+            item["embedding"]
+        )
 
     return embeddings
