@@ -27,7 +27,7 @@ interface DashboardProps {
   onNavigateHome: () => void;
 }
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const STORAGE_KEYS = {
   uploads: "ragPdfRecentUploads",
   messages: "ragPdfMessages",
@@ -36,7 +36,11 @@ const STORAGE_KEYS = {
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigateHome }) => {
   const [activeTab, setActiveTab] = useState<"search" | "documents" | "analytics">("search");
   const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [apiStatusDetail, setApiStatusDetail] = useState("Looking for FastAPI on port 8000.");
+  const [apiStatusDetail, setApiStatusDetail] = useState(
+    import.meta.env.VITE_API_URL
+      ? `Connecting to backend: ${import.meta.env.VITE_API_URL}`
+      : "Looking for FastAPI on port 8000."
+  );
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [recentUploads, setRecentUploads] = useState<UploadedFile[]>(() => {
@@ -83,7 +87,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateHome }) => {
         setApiStatusDetail(data.message || "FastAPI is responding.");
       } catch (error: any) {
         setApiStatus("offline");
-        setApiStatusDetail("Run: cd backend; uvicorn api:app --reload");
+        setApiStatusDetail(
+          import.meta.env.VITE_API_URL
+            ? "Cannot connect to the backend server."
+            : "Run: cd backend; uvicorn api:app --reload"
+        );
       }
     };
 
