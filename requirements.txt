@@ -1,4 +1,4 @@
-﻿PyPDF2
+PyPDF2
 sentence_transformers
 faiss-cpu
 numpy
@@ -8,3 +8,4 @@ python-multipart
 ollama
 python-dotenv
 chromadb
+groq

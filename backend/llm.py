@@ -1,17 +1,37 @@
-from ollama import chat
+import os
+
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = Groq(
+    api_key=os.getenv(
+        "GROQ_API_KEY"
+    )
+)
 
 
-def generate_answer(history,context, question):
+def generate_answer(
+    history,
+    context,
+    question
+):
 
     previous = ""
 
     for message in history:
+
         previous += (
-            f"{message['role']}:"
+            f"{message['role']}: "
             f"{message['content']}\n"
         )
+
     prompt = f"""
-Conversation History: {previous}
+You are a helpful AI assistant.
+
+Conversation History:
+{previous}
 
 Context:
 {context}
@@ -22,14 +42,15 @@ Question:
 Answer:
 """
 
-    response = chat(
-        model="mistral",
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
-        ]
+        ],
+        temperature=0.3
     )
 
-    return response["message"]["content"]
+    return response.choices[0].message.content
