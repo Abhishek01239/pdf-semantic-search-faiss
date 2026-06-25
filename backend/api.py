@@ -186,7 +186,8 @@ def ask_question(
             )
 
         except Exception as e:
-
+            import traceback
+            traceback.print_exc()
             answer = (
                 f"Groq Error: {str(e)}"
             )
@@ -334,7 +335,8 @@ async def upload_pdf(
         }
 
     except Exception as e:
-
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
 
