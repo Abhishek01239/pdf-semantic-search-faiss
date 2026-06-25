@@ -6,28 +6,67 @@ from pydantic import BaseModel
 from pathlib import Path
 import os
 import tempfile
+
 from PyPDF2 import PdfReader
-from memory import add_message, get_history, clear_history
 
-from qdrant_store import search_chunks, store_chunks
-
-from llm import (
-    generate_answer
+from memory import (
+    add_message,
+    get_history,
+    clear_history
 )
+
+from qdrant_search import search_chunks
+
+from qdrant_store import (
+    store_chunks
+)
+from llm import generate_answer
 
 from chunker import create_chunks
 from embedder import generate_embeddings
 
+
+import sys
+
 app = FastAPI()
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-# Mount static assets from React production build
-dist_assets = FRONTEND_DIR / "dist" / "assets"
-os.makedirs(dist_assets, exist_ok=True)
-app.mount("/assets", StaticFiles(directory=dist_assets), name="assets")
+def safe_print(*args, **kwargs):
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        encoding = sys.stdout.encoding or "utf-8"
+        safe_args = [
+            str(arg).encode(encoding, errors="replace").decode(encoding)
+            for arg in args
+        ]
+        print(*safe_args, **kwargs)
 
-# Enable CORS for frontend
+
+FRONTEND_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "frontend"
+)
+
+dist_assets = (
+    FRONTEND_DIR
+    / "dist"
+    / "assets"
+)
+
+os.makedirs(
+    dist_assets,
+    exist_ok=True
+)
+
+app.mount(
+    "/assets",
+    StaticFiles(
+        directory=dist_assets
+    ),
+    name="assets"
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -49,32 +88,75 @@ def home():
         "PDF RAG API Running"
     }
 
-@app.get("/app", response_class=HTMLResponse)
+
+@app.get(
+    "/app",
+    response_class=HTMLResponse
+)
 def frontend_app():
-    dist_index = FRONTEND_DIR / "dist" / "index.html"
+
+    dist_index = (
+        FRONTEND_DIR
+        / "dist"
+        / "index.html"
+    )
+
     if dist_index.exists():
-        return FileResponse(dist_index)
-    return HTMLResponse("<h2>React Frontend is not built yet. Run 'npm run build' inside frontend directory.</h2>")
+        return FileResponse(
+            dist_index
+        )
+
+    return HTMLResponse(
+        "<h2>React frontend not built.</h2>"
+    )
 
 
 @app.post("/ask")
-def ask_question(request: QueryRequest):
+def ask_question(
+    request: QueryRequest
+):
 
-    question = request.question.strip()
+    question = (
+        request.question.strip()
+    )
 
     if not question:
+
         return {
-            "error": "Question cannot be empty."
+            "error":
+            "Question cannot be empty."
         }
 
-    # Get previous conversation
     history = get_history()
 
-    results = search_chunks(
-    question
-)
+    special_queries = [
+        "give questions from pdf",
+        "summarize pdf",
+        "important topics",
+        "generate questions",
+        "what is in pdf"
+    ]
 
-    # Build context
+    if question.lower() in special_queries:
+
+        results = search_chunks(
+            "",
+            top_k=15
+        )
+
+    else:
+
+        results = search_chunks(
+            question,
+            top_k=5
+        )
+
+    safe_print("\nQUESTION:")
+    safe_print(question)
+
+    safe_print("\nRESULTS:")
+    safe_print(results)
+
     context = "\n\n".join(
         [
             result["chunk"]
@@ -82,21 +164,33 @@ def ask_question(request: QueryRequest):
         ]
     )
 
-    # Generate answer using memory + context (wrapped with error safety for Groq)
-    try:
-        answer = generate_answer(
-            history,
-            context,
-            question
-        )
-    except Exception as e:
+    safe_print("\nCONTEXT:")
+    safe_print(context)
+
+    if not context.strip():
+
         answer = (
-            f"Groq API generation error: {str(e)}\n\n"
-            "Please ensure that the GROQ_API_KEY environment variable is correctly set in backend/.env "
-            "and that you have internet connectivity to access the Groq API."
+            "I could not find relevant "
+            "information in the uploaded "
+            "documents."
         )
 
-    # Save conversation
+    else:
+
+        try:
+
+            answer = generate_answer(
+                history,
+                context,
+                question
+            )
+
+        except Exception as e:
+
+            answer = (
+                f"Groq Error: {str(e)}"
+            )
+
     add_message(
         "user",
         question
@@ -107,7 +201,6 @@ def ask_question(request: QueryRequest):
         answer
     )
 
-    # Build sources
     sources = []
 
     for result in results:
@@ -117,92 +210,145 @@ def ask_question(request: QueryRequest):
         sources.append(
             {
                 "source":
-                    metadata["source"],
+                metadata["source"],
 
                 "chunk_id":
-                    metadata["chunk_id"],
+                metadata["chunk_id"],
 
                 "distance":
-                    result["distance"]
+                result["distance"]
             }
         )
 
     return {
-        "question": question,
-        "answer": answer,
-        "sources": sources,
-        "history_length": len(
-            get_history()
-        )
+        "question":
+        question,
+
+        "answer":
+        answer,
+
+        "sources":
+        sources,
+
+        "history_length":
+        len(get_history())
     }
 
+
 @app.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
-    """Upload and process a PDF file"""
-    
-    if not file.filename.endswith('.pdf'):
+async def upload_pdf(
+    file: UploadFile = File(...)
+):
+
+    if not file.filename.endswith(
+        ".pdf"
+    ):
+
         return {
             "success": False,
-            "message": "Only PDF files are allowed"
+            "message":
+            "Only PDF files are allowed."
         }
-    
+
     try:
-        # Save uploaded file temporarily
+
         contents = await file.read()
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".pdf"
+        ) as tmp:
+
             tmp.write(contents)
+
             tmp_path = tmp.name
-        
-        # Extract text from PDF
-        reader = PdfReader(tmp_path)
+
+        reader = PdfReader(
+            tmp_path
+        )
+
         text = ""
-        
+
         for page in reader.pages:
-            page_text = page.extract_text()
+
+            page_text = (
+                page.extract_text()
+            )
+
             if page_text:
-                text += page_text
-        
-        # Clean up temp file
+
+                text += (
+                    page_text + "\n"
+                )
+
         os.unlink(tmp_path)
-        
+
         if not text.strip():
+
             return {
                 "success": False,
-                "message": "Could not extract text from PDF"
+                "message":
+                "No text could be extracted."
             }
-        
-        # Create chunks and embeddings
-        chunks = create_chunks(text)
-        embeddings = generate_embeddings(chunks)
-        
-        metadata = [
-            {
-                "source": file.filename,
-                "chunk_id": idx
-            }
-            for idx in range(len(chunks))
-        ]
-        
-        # Store in collection
-        store_chunks(chunks, embeddings, metadata)
-        
+
+        chunks = create_chunks(
+            text
+        )
+
+        embeddings = (
+            generate_embeddings(
+                chunks
+            )
+        )
+
+        metadata = []
+
+        for idx in range(
+            len(chunks)
+        ):
+
+            metadata.append(
+                {
+                    "source":
+                    file.filename,
+
+                    "chunk_id":
+                    idx
+                }
+            )
+
+        store_chunks(
+            chunks,
+            embeddings,
+            metadata
+        )
+
         return {
             "success": True,
-            "message": f"Successfully uploaded and processed {file.filename}",
-            "chunks_stored": len(chunks)
+
+            "message":
+            f"{file.filename} uploaded successfully.",
+
+            "chunks_stored":
+            len(chunks)
         }
-        
+
     except Exception as e:
+
         return {
             "success": False,
-            "message": f"Error processing file: {str(e)}"
+
+            "message":
+            str(e)
         }
 
-@app.post('/clear')
+
+@app.post("/clear")
 def clear_chat():
+
     clear_history()
 
-    return{
-        "message":"Conversation Cleared"
+    return {
+        "message":
+        "Conversation cleared."
     }

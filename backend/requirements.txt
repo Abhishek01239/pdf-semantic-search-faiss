@@ -4,6 +4,6 @@ uvicorn
 python-multipart
 python-dotenv
 groq
-qdrant-client
+qdrant-client>=1.10.0
 requests
 numpy

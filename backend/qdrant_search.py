@@ -1,30 +1,67 @@
-from embedder import generate_embeddings
+from vector_store import (
+    client,
+    COLLECTION_NAME
+)
 
-def search_chunks(query, collection, top_k=3):
-    query_embedding = generate_embeddings([query])[0]
+from embedder import (
+    generate_embeddings
+)
 
-    results = collection.query(
-        query_embeddings=[query_embedding.tolist()],
-        n_results=top_k
-    )
 
-    formatted_results = []
-    
-    for i in range(
-        len(results["documents"][0])
-    ):
-        formatted_results.append(
-            {
-                "rank": 1,
+def search_chunks(
+    query,
+    top_k=5
+):
 
-                "chunk": results["documents"][0][i],
+    try:
 
-                "distance": results["distances"][0][i],
-
-                "metadata": results["metadatas"][0][i]
-            }
+        query_embedding = (
+            generate_embeddings(
+                [query]
+            )[0]
         )
 
-    return formatted_results
+        results = client.query_points(
+            collection_name=
+            COLLECTION_NAME,
 
-    
+            query=
+            query_embedding,
+
+            limit=
+            top_k
+        )
+
+        formatted_results = []
+
+        for point in results.points:
+
+            formatted_results.append(
+                {
+                    "chunk":
+                    point.payload["text"],
+
+                    "distance":
+                    point.score,
+
+                    "metadata":
+                    {
+                        "source":
+                        point.payload["source"],
+
+                        "chunk_id":
+                        point.payload["chunk_id"]
+                    }
+                }
+            )
+
+        return formatted_results
+
+    except Exception as e:
+
+        print(
+            "Qdrant search error:",
+            str(e)
+        )
+
+        return []
