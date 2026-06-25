@@ -151,9 +151,14 @@ export const DocLibrary: React.FC<DocLibraryProps> = ({
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       {record.error ? (
-                        <span className="text-[10px] font-mono text-error uppercase font-bold">
-                          Failed
-                        </span>
+                        <div className="text-right">
+                          <span className="text-[10px] font-mono text-error uppercase font-bold" title={record.error}>
+                            Failed
+                          </span>
+                          <p className="text-[9px] text-error mt-[2px] max-w-[150px] truncate animate-pulse" title={record.error}>
+                            {record.error}
+                          </p>
+                        </div>
                       ) : (
                         <span className="px-xs py-[2px] bg-green-500/10 text-green-400 text-[10px] font-mono rounded font-bold uppercase">
                           {record.chunks} Chunks
